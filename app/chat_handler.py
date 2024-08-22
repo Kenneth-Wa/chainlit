@@ -2,7 +2,7 @@ import chainlit as cl
 from function_manager.function_manager import FunctionManager
 from app.document_processor import DocumentProcessor
 from app.speech_handler import SpeechHandler
-from app.utils.oai import CustomEndpoint  # Update this import path
+from app.utils.oai import CustomEndpoint
 
 class ChatHandler:
     def __init__(self, function_manager: FunctionManager, document_processor: DocumentProcessor, speech_handler: SpeechHandler):
@@ -10,6 +10,7 @@ class ChatHandler:
         self.document_processor = document_processor
         self.speech_handler = speech_handler
         self.custom_endpoint = CustomEndpoint()
+        self.history = []
 
     async def handle_message(self, message: cl.Message):
         if message.elements and isinstance(message.elements[0], cl.Audio):
@@ -18,6 +19,10 @@ class ChatHandler:
             text = message.content
 
         response = await self.process_message(text)
+
+        # Update history
+        self.history.append({"role": "user", "content": text})
+        self.history.append({"role": "assistant", "content": response})
 
         if cl.user_session.get("use_voice", False):
             audio = await self.speech_handler.text_to_speech(response)
@@ -31,7 +36,7 @@ class ChatHandler:
             return doc_answer
 
         # Use CustomEndpoint instead of OpenAI directly
-        messages = [{"role": "user", "content": text}]
+        messages = self.history + [{"role": "user", "content": text}]
         try:
             response = self.custom_endpoint.generate(messages)
             return response
@@ -39,9 +44,12 @@ class ChatHandler:
             return f"An error occurred while processing your request: {str(e)}"
 
     async def stream_response(self, text: str):
-        messages = [{"role": "user", "content": text}]
+        messages = self.history + [{"role": "user", "content": text}]
         try:
             async for chunk in self.custom_endpoint.stream(messages):
                 yield chunk
         except Exception as e:
             yield f"An error occurred while streaming the response: {str(e)}"
+
+    def clear_history(self):
+        self.history = []
