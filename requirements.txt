@@ -1,0 +1,15 @@
+chainlit
+openai
+langchain
+pinecone-client>=2.2.1
+pypdf
+tiktoken
+httpx
+requests
+python-dotenv
+langchain-community
+PyPDF2
+faiss-cpu 
+jinja2
+llama-index
+llama-index-embeddings-jinaai
